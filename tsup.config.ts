@@ -1,0 +1,15 @@
+import { defineConfig } from "tsup"
+
+export default defineConfig({
+  entry: ["src/index.ts"],
+  format: ["esm"],
+  target: "node20",
+  clean: true,
+  splitting: false,
+  external: [
+    "@kud/qobuz",
+    "@kud/macos-nowplaying-bridge",
+    "@kud/macos-media-keys",
+  ],
+  banner: { js: "#!/usr/bin/env node" },
+})

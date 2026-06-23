@@ -1,0 +1,46 @@
+{
+  "name": "@kud/qobuz-bridge",
+  "version": "0.1.0",
+  "description": "Background daemon that bridges Qobuz into macOS Now Playing — Control Center tile, artwork, and working media buttons",
+  "type": "module",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kud/qobuz-bridge.git"
+  },
+  "keywords": [
+    "qobuz",
+    "macos",
+    "now-playing",
+    "control-center",
+    "daemon"
+  ],
+  "bin": {
+    "qobuz-bridge": "./dist/index.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "os": [
+    "darwin"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "typecheck": "tsc --noEmit",
+    "start": "node dist/index.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@kud/macos-media-keys": "0.1.0",
+    "@kud/macos-nowplaying-bridge": "0.1.0",
+    "@kud/qobuz": "0.5.5"
+  },
+  "devDependencies": {
+    "@types/node": "26.0.0",
+    "tsup": "8.5.1",
+    "typescript": "6.0.3"
+  }
+}
