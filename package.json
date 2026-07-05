@@ -19,7 +19,8 @@
     "qobuz-bridge": "dist/index.js"
   },
   "files": [
-    "dist"
+    "dist",
+    "native"
   ],
   "os": [
     "darwin"

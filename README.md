@@ -72,3 +72,6 @@ npm run dev
 | `npm start`         | Run the compiled output      |
 
 📚 **Full documentation → [qobuz-bridge-cli/docs](https://kud.io/projects/qobuz-bridge-cli/docs)**
+## Disclaimer
+
+This is an independent, unofficial project — not affiliated with, endorsed by, or sponsored by Qobuz. "Qobuz", the Qobuz logo, and any icons derived from it are trademarks of Qobuz Music, used here only to indicate compatibility.
