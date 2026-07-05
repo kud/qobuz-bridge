@@ -31,11 +31,31 @@ let task = Process()
 task.executableURL = URL(fileURLWithPath: node)
 task.arguments = [script]
 
+// When node exits on its own, exit with its status so launchd's KeepAlive
+// restarts us cleanly.
+task.terminationHandler = { proc in exit(proc.terminationStatus) }
+
+// launchd sends SIGTERM on unload/restart. Without handling it we'd die and
+// orphan the node child, which keeps owning the Now Playing slot — that's how
+// duplicate bridges piled up. Tear the child down first, then exit. Signal
+// sources need SIG_IGN so the default disposition doesn't kill us first, and a
+// running main loop so they (and terminationHandler) can fire while we wait.
+let sources = [SIGTERM, SIGINT, SIGHUP].map { sig -> DispatchSourceSignal in
+  signal(sig, SIG_IGN)
+  let source = DispatchSource.makeSignalSource(signal: sig, queue: .main)
+  source.setEventHandler {
+    if task.isRunning { task.terminate() }
+    exit(0)
+  }
+  source.resume()
+  return source
+}
+_ = sources  // keep the sources alive for the process lifetime
+
 do {
   try task.run()
 } catch {
   fail("failed to launch node: \(error)", 71)
 }
 
-task.waitUntilExit()
-exit(task.terminationStatus)
+RunLoop.main.run()

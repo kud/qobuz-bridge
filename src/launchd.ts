@@ -23,6 +23,27 @@ const QOBUZ_ICON = "/Applications/Qobuz.app/Contents/Resources/icon.icns"
 const LSREGISTER =
   "/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister"
 
+// Ad-hoc signing (`-`) pins the Accessibility grant to the exact cdhash, so every
+// rebuild re-prompts. If a stable self-signed code-signing identity named below
+// exists in the keychain, sign with it instead: its designated requirement is the
+// cert, not the cdhash, so the grant survives rebuilds. Falls back to ad-hoc when
+// absent, keeping the default install dependency-free.
+const SIGN_IDENTITY_NAME = "Qobuz Bridge Code Signing"
+
+const resolveSigningIdentity = async (): Promise<string> => {
+  try {
+    const { stdout } = await exec("security", [
+      "find-identity",
+      "-v",
+      "-p",
+      "codesigning",
+    ])
+    return stdout.includes(SIGN_IDENTITY_NAME) ? SIGN_IDENTITY_NAME : "-"
+  } catch {
+    return "-"
+  }
+}
+
 const plistPath = join(homedir(), "Library", "LaunchAgents", `${LABEL}.plist`)
 const logPath = join(homedir(), "Library", "Logs", "qobuz-bridge.log")
 
@@ -118,7 +139,8 @@ const buildApp = async () => {
   await writeFile(infoPlistPath, infoPlist(await readVersion(), hasIcon))
   // Sign last: codesign hashes the executable AND resources, so the icon and
   // config must already be in place or the signature won't cover them.
-  await exec("codesign", ["--force", "--sign", "-", appPath])
+  const identity = await resolveSigningIdentity()
+  await exec("codesign", ["--force", "--sign", identity, appPath])
 }
 
 export const install = async () => {
