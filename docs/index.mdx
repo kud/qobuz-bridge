@@ -1,0 +1,14 @@
+---
+title: 👋 Introduction
+description: A macOS background daemon that shows Qobuz in Control Center and routes the media buttons back to it.
+---
+
+qobuz-bridge makes the Qobuz desktop app a proper Now Playing citizen on macOS: title, artist, album and artwork in Control Center, with next, previous and play/pause working from there or from your keyboard. It is a thin layer over three existing packages, so it adds no playback logic of its own.
+
+It belongs to the Qobuz family. The shared core is [qobuz](/projects/qobuz), the terminal client is [qobuz-cli](/projects/qobuz-cli) and the assistant server is [mcp-qobuz](/projects/mcp-qobuz).
+
+## What's here
+
+- [🔑 Connecting your account](/projects/qobuz-bridge/docs/connecting) — how `qobuz-bridge login` gets a token into the Keychain
+- [🚀 Running the daemon](/projects/qobuz-bridge/docs/daemon) — foreground mode, `install`, `uninstall`, the app bundle and the Accessibility grant
+- [🔍 How it works](/projects/qobuz-bridge/docs/how-it-works) — polling, media keys, and the current limitations

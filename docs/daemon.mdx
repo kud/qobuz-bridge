@@ -1,0 +1,69 @@
+---
+title: 🚀 Running the daemon
+description: Run the bridge in the foreground, or install it as a login item that starts at login and restarts on crash.
+---
+
+Requires macOS, Node.js 20 or later, and the Qobuz desktop app.
+
+## Commands
+
+| Command                  | Effect                                                                 |
+| ------------------------ | ---------------------------------------------------------------------- |
+| `qobuz-bridge login`     | Connect your account, see [Connecting your account](/projects/qobuz-bridge/docs/connecting) |
+| `qobuz-bridge`           | Run the daemon in the foreground; Ctrl-C quits                         |
+| `qobuz-bridge install`   | Build the app, register a launchd login item and start it now          |
+| `qobuz-bridge uninstall` | Unload the login item and delete it and the app                        |
+
+There are no flags. Any command other than `login`, `install` or `uninstall` runs the daemon.
+
+## Foreground
+
+```console
+$ qobuz-bridge
+qobuz-bridge running — open Control Center. Ctrl-C to quit.
+now playing → Intro — The xx
+```
+
+Useful for a first try before installing anything.
+
+## Installing the login item
+
+```console
+$ qobuz-bridge install
+built app     → /Applications/Qobuz Bridge.app
+login item    → ~/Library/LaunchAgents/io.kud.qobuz-bridge.plist
+logs          → ~/Library/Logs/qobuz-bridge.log
+```
+
+`install` does the following:
+
+1. Builds `/Applications/Qobuz Bridge.app` by compiling a small Swift launcher with `swiftc`, so the Xcode command line tools must be present. Any earlier bundle is wiped first.
+2. Copies Qobuz's own icon from `/Applications/Qobuz.app` into the bundle when it exists. No Qobuz artwork ships with the package.
+3. Signs the bundle with `codesign`, then registers it with LaunchServices so the Control Center tile shows its name and icon.
+4. Writes the launchd agent `io.kud.qobuz-bridge` with `RunAtLoad` and `KeepAlive`, so the daemon starts at login and restarts if it dies, then loads it.
+
+Re-running `install` is safe: it unloads the previous agent and rebuilds.
+
+### Accessibility permission
+
+Media keys are intercepted with a system event tap, which needs a one-off grant. When macOS asks, allow "Qobuz Bridge" under System Settings, Privacy & Security, Accessibility.
+
+An ad-hoc signature ties that grant to the exact build, so it is requested again after each reinstall. To keep it across rebuilds, create a self-signed code-signing certificate named `Qobuz Bridge Code Signing` in your keychain. `install` uses it automatically when it finds it and falls back to ad-hoc signing otherwise.
+
+### Which Node it uses
+
+launchd does not read your shell's `PATH`, so the app records an absolute path. It prefers the mise shim at `~/.local/share/mise/shims/node`, which follows runtime upgrades, and otherwise pins the Node that ran `install`.
+
+## Logs
+
+The background daemon writes stdout and stderr to `~/Library/Logs/qobuz-bridge.log`.
+
+## Uninstalling
+
+```console
+$ qobuz-bridge uninstall
+removed login item → ~/Library/LaunchAgents/io.kud.qobuz-bridge.plist
+removed app        → /Applications/Qobuz Bridge.app
+```
+
+This unloads the agent, then deletes the plist and the app. The Accessibility entry is left in place, so remove it by hand in System Settings if you want it gone. The Keychain token is untouched.

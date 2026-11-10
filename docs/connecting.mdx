@@ -1,0 +1,47 @@
+---
+title: 🔑 Connecting your account
+description: Store a Qobuz token in the macOS Keychain so the bridge can ask what is playing.
+---
+
+The bridge needs a Qobuz token to resolve the current track. It stores it in the macOS Keychain under the service name `qobuz`, the same entry used by the rest of the Qobuz family. If you have already run `qobuz login` from [qobuz-cli](/projects/qobuz-cli), you are connected and can skip this page.
+
+## Logging in
+
+```sh
+qobuz-bridge login
+```
+
+Qobuz exposes the token nowhere except the browser's own requests, so the command walks you through fetching it:
+
+1. Log in at `https://play.qobuz.com/login`.
+2. Open DevTools and go to the Network tab.
+3. Click any request to `www.qobuz.com/api.json`.
+4. Copy the value of its `X-User-Auth-Token` request header.
+5. Paste it at the `X-User-Auth-Token:` prompt. The input is hidden, so it never lands on screen or in scrollback.
+
+On success you see:
+
+```text
+✓ connected — token stored in the Keychain (service "qobuz").
+Next: qobuz-bridge install
+```
+
+## Scripting
+
+The token can be passed as the first argument instead of being prompted for:
+
+```sh
+qobuz-bridge login <token>
+```
+
+This keeps the prompt out of the way, but the token then appears in your shell history, so the hidden prompt is the safer default.
+
+## When you are not connected
+
+Running the daemon, or `qobuz-bridge install`, without a stored token fails with:
+
+```text
+Not connected to Qobuz. Run  qobuz-bridge login  first.
+```
+
+`install` checks for the token before doing anything, because the login item starts immediately and would otherwise crash-loop on missing credentials.

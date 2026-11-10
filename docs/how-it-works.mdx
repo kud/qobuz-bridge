@@ -1,0 +1,34 @@
+---
+title: 🔍 How it works
+description: What the daemon polls, how Control Center buttons reach Qobuz, and what it cannot yet do.
+---
+
+The bridge wires together three packages and keeps no playback logic of its own:
+
+- [`@kud/qobuz`](/projects/qobuz) resolves the current track.
+- `@kud/macos-nowplaying-bridge` publishes it to the Now Playing slot.
+- `@kud/macos-media-keys` sends key presses back.
+
+## Track to Control Center
+
+Every 3 seconds the daemon asks Qobuz what is playing. When the track id changes it pushes title, artist, album, duration and artwork to Control Center and logs a `now playing → <title> — <artist>` line. Artwork is the large album image from Qobuz's CDN, falling back to the small one. If the track has not changed, nothing is sent.
+
+Elapsed time is read from `~/Library/Application Support/Qobuz/player-0.json` once, when the track changes. There are no further network calls to track position.
+
+## Buttons to Qobuz
+
+Control Center events are turned into system media keys, which the Qobuz desktop app already responds to:
+
+| Control Center | Key sent     |
+| -------------- | ------------ |
+| Next           | `next`       |
+| Previous       | `previous`   |
+| Play, pause, toggle | `play`  |
+
+The event tap that catches the keys is why the Accessibility grant is needed, see [Running the daemon](/projects/qobuz-bridge/docs/daemon).
+
+## Limitations
+
+- **Pause state:** the state file exposes a position but no play/pause flag, so the tile always reports `playing` while a track is detected.
+- **Position drift:** elapsed time is captured at the track change, not continuously, so seeking within a track is not reflected.
+- **macOS only:** on any other platform the daemon exits with `@kud/qobuz-bridge only works on macOS`.
