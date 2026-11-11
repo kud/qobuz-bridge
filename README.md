@@ -16,8 +16,8 @@
 - **Control Center tile** — Qobuz becomes a first-class macOS Now Playing citizen: track title, artist, album, and artwork appear in Control Center just like any native player.
 - **Working media buttons** — next, previous, and play/pause from Control Center (or your keyboard's media keys) are routed back to Qobuz via a system-level event tap.
 - **Rich artwork** — album art is pulled from Qobuz's CDN and pushed live to the Now Playing slot, updating as tracks change.
-- **Auto-start on login** — a single `qobuz-bridge install` writes a launchd agent plist so the daemon starts automatically at login and restarts if it crashes.
-- **No polling overhead** — metadata is read from Qobuz's local `player-0.json` state file on a 3-second interval; no extra network calls for position tracking.
+- **Auto-start on login** — a single `qobuz-bridge install` builds a small `Qobuz Bridge.app` and registers it as a launchd agent, so the daemon starts automatically at login and restarts if it crashes.
+- **Light polling** — every 3 seconds the daemon asks Qobuz what is playing (`client.nowPlaying()` from `@kud/qobuz`) and only updates Control Center when the track changes; elapsed time is read once per track from Qobuz's local `player-0.json` state file.
 - **Three-package composition** — thin orchestration layer that wires `@kud/qobuz`, `@kud/macos-nowplaying-bridge`, and `@kud/macos-media-keys` together with no duplicated logic.
 
 ## Install
@@ -26,38 +26,43 @@
 npm install -g @kud/qobuz-bridge
 ```
 
-Requires macOS and Node.js ≥ 20, with the Qobuz desktop app installed. Then connect your account once:
+Requires macOS and Node.js ≥ 20, with the Qobuz desktop app installed. `qobuz-bridge install` also needs `swiftc` (the Xcode command line tools) to build its launcher app. Then connect your account once:
 
 ```sh
 qobuz-bridge login
 ```
 
-This stores a Qobuz token in the macOS Keychain (service `"qobuz"`, shared with the rest of the `@kud/qobuz` suite — if you've already run `qobuz login` from `@kud/qobuz-cli`, you're connected and can skip this). The `install` command's daemon process needs Accessibility permission to intercept media keys.
+This stores a Qobuz token in the macOS Keychain (service `"qobuz"`, shared with the rest of the `@kud/qobuz` suite — if you've already run `qobuz login` from `@kud/qobuz-cli`, you're connected and can skip this). The token can also be passed as an argument for scripting, `qobuz-bridge login <token>`, at the cost of it landing in your shell history.
+
+Media keys are intercepted with a system event tap, so the `Qobuz Bridge` app that `install` builds in `/Applications` needs Accessibility permission: allow it under System Settings → Privacy & Security → Accessibility when macOS asks.
 
 ## Usage
 
 ```console
 $ qobuz-bridge login
 ✓ connected — token stored in the Keychain (service "qobuz").
+Next: qobuz-bridge install
 
 $ qobuz-bridge
 qobuz-bridge running — open Control Center. Ctrl-C to quit.
 now playing → Intro — The xx
 
 $ qobuz-bridge install
-installed login item → ~/Library/LaunchAgents/io.kud.qobuz-bridge.plist
-logs → ~/Library/Logs/qobuz-bridge.log
+built app     → /Applications/Qobuz Bridge.app
+login item    → ~/Library/LaunchAgents/io.kud.qobuz-bridge.plist
+logs          → ~/Library/Logs/qobuz-bridge.log
 
 $ qobuz-bridge uninstall
 removed login item → ~/Library/LaunchAgents/io.kud.qobuz-bridge.plist
+removed app        → /Applications/Qobuz Bridge.app
 ```
 
-| Command                  | Effect                                                 |
-| ------------------------ | ------------------------------------------------------ |
-| `qobuz-bridge login`     | Connect your Qobuz account; stores a token in Keychain |
-| `qobuz-bridge`           | Run the daemon in the foreground (Ctrl-C to quit)      |
-| `qobuz-bridge install`   | Register a launchd login item; starts the daemon now   |
-| `qobuz-bridge uninstall` | Remove the login item (daemon stops at next reboot)    |
+| Command                  | Effect                                                            |
+| ------------------------ | ----------------------------------------------------------------- |
+| `qobuz-bridge login`     | Connect your Qobuz account; stores a token in Keychain            |
+| `qobuz-bridge`           | Run the daemon in the foreground (Ctrl-C to quit)                 |
+| `qobuz-bridge install`   | Build the app, register a launchd login item and start it now     |
+| `qobuz-bridge uninstall` | Stop the daemon now and delete the login item and the app         |
 
 Logs from the background daemon are written to `~/Library/Logs/qobuz-bridge.log`.
 
