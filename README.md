@@ -14,7 +14,7 @@
 ## Features
 
 - **Control Center tile** — Qobuz becomes a first-class macOS Now Playing citizen: track title, artist, album, and artwork appear in Control Center just like any native player.
-- **Working media buttons** — next, previous, and play/pause from Control Center (or your keyboard's media keys) are routed back to Qobuz via a system-level event tap.
+- **Working media buttons** — next, previous, and play/pause from Control Center (or your keyboard's media keys) are turned into system media keys, which the Qobuz desktop app already responds to.
 - **Rich artwork** — album art is pulled from Qobuz's CDN and pushed live to the Now Playing slot, updating as tracks change.
 - **Auto-start on login** — a single `qobuz-bridge install` builds a small `Qobuz Bridge.app` and registers it as a launchd agent, so the daemon starts automatically at login and restarts if it crashes.
 - **Light polling** — every 3 seconds the daemon asks Qobuz what is playing (`client.nowPlaying()` from `@kud/qobuz`) and only updates Control Center when the track changes; elapsed time is read once per track from Qobuz's local `player-0.json` state file.
@@ -40,6 +40,11 @@ Media keys are intercepted with a system event tap, so the `Qobuz Bridge` app th
 
 ```console
 $ qobuz-bridge login
+Log in at https://play.qobuz.com/login, then open DevTools → Network,
+click any request to www.qobuz.com/api.json, and copy its
+X-User-Auth-Token request header.
+
+X-User-Auth-Token:
 ✓ connected — token stored in the Keychain (service "qobuz").
 Next: qobuz-bridge install
 
@@ -52,9 +57,13 @@ built app     → /Applications/Qobuz Bridge.app
 login item    → ~/Library/LaunchAgents/io.kud.qobuz-bridge.plist
 logs          → ~/Library/Logs/qobuz-bridge.log
 
+One-time step: when macOS asks, grant “Qobuz Bridge” Accessibility
+access in System Settings → Privacy & Security → Accessibility.
+
 $ qobuz-bridge uninstall
 removed login item → ~/Library/LaunchAgents/io.kud.qobuz-bridge.plist
 removed app        → /Applications/Qobuz Bridge.app
+You can revoke its entry in System Settings → Privacy & Security → Accessibility.
 ```
 
 | Command                  | Effect                                                            |
@@ -66,7 +75,7 @@ removed app        → /Applications/Qobuz Bridge.app
 
 Logs from the background daemon are written to `~/Library/Logs/qobuz-bridge.log`.
 
-> **Known limitation:** `player-0.json` exposes the playback position but not a discrete play/pause flag, so the bridge reports state as `"playing"` whenever a track is detected. Pause detection will improve once the underlying state file exposes it.
+> **Known limitation:** `player-0.json` exposes the playback position but not a discrete play/pause flag, so the bridge reports state as `"playing"` whenever a track is detected. Elapsed time is likewise captured once per track, so seeking within a track is not reflected.
 
 ## Development
 
