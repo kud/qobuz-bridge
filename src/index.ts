@@ -1,10 +1,11 @@
-import { connect, createKeychainStore, createQobuzClient } from "@kud/qobuz"
+import { connect, createKeychainStore } from "@kud/qobuz"
 import { sendMediaKey } from "@kud/macos-media-keys"
 import { createNowPlayingBridge } from "@kud/macos-nowplaying-bridge"
 import { readFile } from "node:fs/promises"
 import { homedir } from "node:os"
 import { join } from "node:path"
 import { createInterface } from "node:readline"
+import { errorMessage, isAuthError, LOGIN_COMMAND, openClient } from "./client.js"
 import { createErrorReporter } from "./errors.js"
 import { install, uninstall } from "./launchd.js"
 
@@ -17,11 +18,6 @@ const POLL_INTERVAL_MS = 3000
 // The whole @kud/qobuz suite (CLI, bridge, …) shares one Keychain entry — the
 // default service "qobuz" — so logging in through any of them connects them all.
 const store = createKeychainStore()
-
-const NOT_CONNECTED = "Not connected to Qobuz. Run  qobuz-bridge login  first."
-
-const isAuthError = (error: unknown): boolean =>
-  (error as { kind?: string } | null)?.kind === "auth"
 
 // @kud/qobuz resolves the track but not playback position; read it straight
 // from the player state file (player.position.value is milliseconds).
@@ -73,9 +69,9 @@ const login = async () => {
     process.exit(1)
   }
   try {
-    await connect({ token, store })
+    await connect({ token, store, loginCommand: LOGIN_COMMAND })
   } catch (error) {
-    console.error(`✗ ${error instanceof Error ? error.message : String(error)}`)
+    console.error(`✗ ${errorMessage(error)}`)
     process.exit(1)
   }
   console.log('✓ connected — token stored in the Keychain (service "qobuz").')
@@ -89,9 +85,9 @@ const run = async () => {
 
   // A missing token surfaces here for the launchd daemon too, so keep it a clear
   // one-liner in the log rather than an unhandled stack trace.
-  const client = await createQobuzClient({ store }).catch((error: unknown) => {
+  const client = await openClient(store).catch((error: unknown) => {
     if (isAuthError(error)) {
-      console.error(NOT_CONNECTED)
+      console.error(errorMessage(error))
       process.exit(1)
     }
     throw error
@@ -114,11 +110,7 @@ const run = async () => {
     try {
       track = await client.nowPlaying()
     } catch (error) {
-      pollErrors.report(
-        isAuthError(error)
-          ? `${String(error)} — run  qobuz-bridge login  to refresh the token.`
-          : String(error),
-      )
+      pollErrors.report(errorMessage(error))
       return
     }
     pollErrors.clear()
@@ -155,10 +147,14 @@ const main = async () => {
   if (command === "install") {
     // Loading the launchd agent starts the daemon immediately (RunAtLoad), and it
     // would crash-loop on missing credentials. Refuse up front with a fix instead.
-    if (!(await store.load())) {
-      console.error(NOT_CONNECTED)
-      process.exit(1)
-    }
+    // openClient only reads the store, so this costs no network round trip.
+    await openClient(store).catch((error: unknown) => {
+      if (isAuthError(error)) {
+        console.error(errorMessage(error))
+        process.exit(1)
+      }
+      throw error
+    })
     return install()
   }
   if (command === "uninstall") return uninstall()

@@ -41,7 +41,13 @@ This keeps the prompt out of the way, but the token then appears in your shell h
 Running the daemon, or `qobuz-bridge install`, without a stored token fails with:
 
 ```text
-Not connected to Qobuz. Run  qobuz-bridge login  first.
+not connected — log in first with `qobuz-bridge login`
+```
+
+If Qobuz later rejects the stored token, the daemon logs this once rather than on every poll:
+
+```text
+Qobuz rejected the stored credentials — log in again with `qobuz-bridge login`
 ```
 
 `install` checks for the token before doing anything, because the login item starts immediately and would otherwise crash-loop on missing credentials.
