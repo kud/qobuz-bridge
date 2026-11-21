@@ -5,6 +5,7 @@ import { readFile } from "node:fs/promises"
 import { homedir } from "node:os"
 import { join } from "node:path"
 import { createInterface } from "node:readline"
+import { createErrorReporter } from "./errors.js"
 import { install, uninstall } from "./launchd.js"
 
 const PLAYER_STATE_PATH = join(
@@ -58,11 +59,14 @@ const promptHidden = (label: string): Promise<string> =>
 // otherwise prompts for it hidden so it stays out of shell history.
 const login = async () => {
   const provided = process.argv[3]
-  console.log(
-    "Log in at https://play.qobuz.com/login, then open DevTools → Network,",
-  )
-  console.log("click any request to www.qobuz.com/api.json, and copy its")
-  console.log("X-User-Auth-Token request header.\n")
+  // The DevTools walkthrough only matters when we're about to prompt for it.
+  if (provided === undefined) {
+    console.log(
+      "Log in at https://play.qobuz.com/login, then open DevTools → Network,",
+    )
+    console.log("click any request to www.qobuz.com/api.json, and copy its")
+    console.log("X-User-Auth-Token request header.\n")
+  }
   const token = provided ?? (await promptHidden("X-User-Auth-Token: "))
   if (!token) {
     console.error("No token provided.")
@@ -101,9 +105,23 @@ const run = async () => {
     bridge.on(event, () => void sendMediaKey("play").catch(logError))
   }
 
+  // Surface polling failures (e.g. a token expiring mid-run) in the log, once
+  // per distinct error rather than every POLL_INTERVAL_MS.
+  const pollErrors = createErrorReporter((message) => console.error(message))
   let lastTrackId: number | undefined
   const tick = async () => {
-    const track = await client.nowPlaying().catch(() => undefined)
+    let track: Awaited<ReturnType<typeof client.nowPlaying>>
+    try {
+      track = await client.nowPlaying()
+    } catch (error) {
+      pollErrors.report(
+        isAuthError(error)
+          ? `${String(error)} — run  qobuz-bridge login  to refresh the token.`
+          : String(error),
+      )
+      return
+    }
+    pollErrors.clear()
     if (!track || track.id === lastTrackId) return
     lastTrackId = track.id
     bridge.update({
