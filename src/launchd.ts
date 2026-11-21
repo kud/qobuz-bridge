@@ -123,8 +123,9 @@ const plist = () => `<?xml version="1.0" encoding="UTF-8"?>
 `
 
 // Assemble Qobuz Bridge.app: compile the launcher into it, bake the node/script
-// paths into config.json, write Info.plist, then ad-hoc sign the whole bundle so
-// its Accessibility grant survives node upgrades and rebuilds.
+// paths into config.json, write Info.plist, then sign the whole bundle — with the
+// self-signed identity when present (grant survives rebuilds), ad-hoc otherwise
+// (grant survives node upgrades, but each rebuild re-prompts).
 const buildApp = async () => {
   // Wipe any prior bundle first so a renamed executable or dropped resource
   // never lingers as a stale file inside the freshly signed app.
@@ -145,7 +146,26 @@ const buildApp = async () => {
   await exec("codesign", ["--force", "--sign", identity, appPath])
 }
 
+// swiftc ships with the Xcode Command Line Tools; without it the shim fails (or
+// pops an install dialog). Probe it before buildApp wipes the existing bundle.
+export const hasSwiftToolchain = async (
+  run: (file: string, args: string[]) => Promise<unknown> = exec,
+): Promise<boolean> => {
+  try {
+    await run("swiftc", ["--version"])
+    return true
+  } catch {
+    return false
+  }
+}
+
 export const install = async () => {
+  if (!(await hasSwiftToolchain())) {
+    console.error(
+      "Swift toolchain not found — run  xcode-select --install , then  qobuz-bridge install  again.",
+    )
+    process.exit(1)
+  }
   await mkdir(dirname(plistPath), { recursive: true })
   await mkdir(dirname(logPath), { recursive: true })
   await buildApp()
