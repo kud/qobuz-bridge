@@ -40,21 +40,30 @@ Media keys are intercepted with a system event tap, so the `Qobuz Bridge` app th
 
 ```console
 $ qobuz-bridge login
+Log in at https://play.qobuz.com/login, then open DevTools → Network,
+click any request to www.qobuz.com/api.json, and copy its
+X-User-Auth-Token request header.
+
+X-User-Auth-Token:
 ✓ connected — token stored in the Keychain (service "qobuz").
 Next: qobuz-bridge install
 
 $ qobuz-bridge
-qobuz-bridge running — open Control Center. Ctrl-C to quit.
 now playing → Intro — The xx
+qobuz-bridge running — open Control Center. Ctrl-C to quit.
 
 $ qobuz-bridge install
 built app     → /Applications/Qobuz Bridge.app
 login item    → ~/Library/LaunchAgents/io.kud.qobuz-bridge.plist
 logs          → ~/Library/Logs/qobuz-bridge.log
 
+One-time step: when macOS asks, grant “Qobuz Bridge” Accessibility
+access in System Settings → Privacy & Security → Accessibility.
+
 $ qobuz-bridge uninstall
 removed login item → ~/Library/LaunchAgents/io.kud.qobuz-bridge.plist
 removed app        → /Applications/Qobuz Bridge.app
+You can revoke its entry in System Settings → Privacy & Security → Accessibility.
 ```
 
 | Command                  | Effect                                                            |
